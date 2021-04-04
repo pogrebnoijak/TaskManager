@@ -7,7 +7,10 @@ import java.util.Collections.synchronizedMap
 class TaskExecutor {
     private val synMap: MutableMap<Task, Pair<Deferred<Task>, Boolean>> = synchronizedMap(mutableMapOf())
 
-    suspend fun execute(tasks: Collection<Task>) = bfs(object : Task { override fun dependencies() = tasks })
+    suspend fun execute(tasks: Collection<Task>): Task {
+        synMap.clear()
+        return bfs(object : Task { override fun dependencies() = tasks })
+    }
 
     private suspend fun bfs(task: Task): Task {
         val job = GlobalScope.launch {

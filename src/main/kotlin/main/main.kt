@@ -1,6 +1,8 @@
 package main
 
-suspend fun main() {
+import kotlinx.coroutines.runBlocking
+
+fun main() = runBlocking {
     val taskExecutor = TaskExecutor()
     val taskExecutorNaive = TaskExecutorNaive()
 
