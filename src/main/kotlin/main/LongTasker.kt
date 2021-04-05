@@ -1,10 +1,11 @@
 package main
 
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.runBlocking
 
 open class LongTasker(tasks: Collection<Task>, name: String = ""): Tasker(tasks, name) {
-    override suspend fun execute() {
-        delay(100)
+    override fun execute() = runBlocking {
+        delay(10)
         super.execute()
     }
 }

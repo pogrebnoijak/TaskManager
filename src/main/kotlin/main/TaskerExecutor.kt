@@ -1,36 +1,50 @@
 package main
 
-import kotlinx.coroutines.*
-import java.util.Collections.synchronizedMap
+import java.util.Collections.*
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.ExecutorService
+import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
 
 // assume that the graph is acyclic
-class TaskExecutor {
-    private val synMap: MutableMap<Task, Pair<Deferred<Task>, Boolean>> = synchronizedMap(mutableMapOf())
+class TaskExecutor(private val nTreads: Int = 4) {
+    private val setAll: MutableSet<Task> = synchronizedSet(mutableSetOf())
+    private val setDone: MutableSet<Task> = synchronizedSet(mutableSetOf())
+    private val mapParent: MutableMap<Task, MutableList<() -> Unit>> = synchronizedMap(mutableMapOf())
+    private lateinit var executor : ExecutorService
 
-    suspend fun execute(tasks: Collection<Task>): Task {
-        synMap.clear()
-        return bfs(object : Task { override fun dependencies() = tasks })
+    fun execute(tasks: Collection<Task>) {
+        setAll.clear()
+        setDone.clear()
+        executor = Executors.newFixedThreadPool(nTreads)
+        val latch = CountDownLatch(1)
+        dfs(object : Task { override fun dependencies() = tasks }, latch)
+        latch.await()
+        executor.shutdown()
+        executor.awaitTermination(1, TimeUnit.DAYS)
     }
 
-    private suspend fun bfs(task: Task): Task {
-        val job = GlobalScope.launch {
-            task.dependencies().map {
-                if (!synMap.containsKey(it)) {
-                    async { bfs(it) }.also { exTask ->
-                        synMap[it] = Pair(exTask, false)
-                    }
-                }
-                else synMap[it]!!.first
-            }.forEach { dTask ->
-                dTask.await().let {
-                    if(synMap[it]?.second == false) {
-                        synMap[it] = Pair(dTask, true)
-                        it.execute()
-                    }
+    private fun dfs(task: Task, latchParent: CountDownLatch) {
+        val latch = CountDownLatch(task.dependencies().size)
+        task.dependencies().forEach {
+            if (!setAll.contains(it)) {
+                setAll.add(it)
+                dfs(it, latch)
+            } else if (setDone.contains(it)) {
+                latch.countDown()
+            } else {
+                synchronized(mapParent) {
+                    mapParent.getOrPut(it) { mutableListOf() }
+                        .add { latch.countDown() }
                 }
             }
         }
-        job.join()
-        return task
+        latch.await()
+        executor.submit {
+            task.execute()
+            setDone.add(task)
+            mapParent[task]?.forEach { it() }
+            latchParent.countDown()
+        }
     }
 }
