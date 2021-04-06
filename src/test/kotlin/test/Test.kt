@@ -82,7 +82,7 @@ class TaskExecutorTest {
             (1..10).map { TaskerTest(listEx, listTaker) }
         val listTask: MutableList<Task> = listLongTaker as MutableList<Task>
         listTask.addAll(listOf(listTaker[1], listTaker[4], listTaker[5], listEmpty[2], listEmpty[8]))
-        runAndPrint(listTask, 30, "testSame")
+        runAndPrint(listTask, 30, "testSome")
     }
 
     @Test
@@ -95,20 +95,20 @@ class TaskExecutorTest {
             (1..10).map { TaskerTestLong(listEx, listTaker) }
         val listTask: MutableList<Task> = listLongTaker as MutableList<Task>
         listTask.addAll(listOf(listTaker[1], listTaker[4], listTaker[5], listEmpty[2], listEmpty[8]))
-        runAndPrint(listTask, 30, "testSame")
+        runAndPrint(listTask, 30, "longTestSome")
     }
 
     @Test
     fun bigTest() {
         generateSequence(1000) { it * 2 }.takeWhile { it <= 16000 }.forEach { kol ->
-            val allTask: MutableList<Task> = (1..kol/20).map { TaskerTest(listEx, listOf()) }.toMutableList()
-            for (i in kol/20..kol) {
-                allTask.add(TaskerTest(listEx, (List(Random.nextInt(kol/10)) {
+            val allTask: MutableList<Task> = (1..kol / 20).map { TaskerTest(listEx, listOf()) }.toMutableList()
+            for (i in kol / 20..kol) {
+                allTask.add(TaskerTest(listEx, (List(Random.nextInt(kol / 10)) {
                     Random.nextInt(0, i)
                 }.map { allTask[it] })))
             }
-            val listTask = List(kol/20) { allTask[Random.nextInt(0, kol)] }
-            runAndPrint(listTask, -1, "testBig($kol)")
+            val listTask = List(kol / 20) { allTask[Random.nextInt(0, kol)] }
+            runAndPrint(listTask, -1, "bigTest($kol)")
         }
     }
 

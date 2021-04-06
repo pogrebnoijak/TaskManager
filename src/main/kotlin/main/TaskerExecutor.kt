@@ -8,9 +8,9 @@ import java.util.concurrent.TimeUnit
 
 // assume that the graph is acyclic
 class TaskExecutor(private val nTreads: Int = 4) {
-    private val setAll: MutableSet<Task> = synchronizedSet(mutableSetOf())
+    private val setAll: MutableSet<Task> = mutableSetOf()
     private val setDone: MutableSet<Task> = synchronizedSet(mutableSetOf())
-    private val mapParent: MutableMap<Task, MutableList<() -> Unit>> = synchronizedMap(mutableMapOf())
+    private val mapParent: MutableMap<Task, MutableList<() -> Unit>> = mutableMapOf()
     private lateinit var executor : ExecutorService
 
     fun execute(tasks: Collection<Task>) {
@@ -27,15 +27,19 @@ class TaskExecutor(private val nTreads: Int = 4) {
     private fun dfs(task: Task, latchParent: CountDownLatch) {
         val latch = CountDownLatch(task.dependencies().size)
         task.dependencies().forEach {
-            if (!setAll.contains(it)) {
-                setAll.add(it)
-                dfs(it, latch)
-            } else if (setDone.contains(it)) {
-                latch.countDown()
-            } else {
-                synchronized(mapParent) {
-                    mapParent.getOrPut(it) { mutableListOf() }
-                        .add { latch.countDown() }
+            synchronized(setAll) {
+                if (!setAll.contains(it)) {
+                    setAll.add(it)
+                    dfs(it, latch)
+                } else synchronized(setDone) {
+                    if (setDone.contains(it)) {
+                        latch.countDown()
+                    } else {
+                        synchronized(mapParent) {
+                            mapParent.getOrPut(it) { mutableListOf() }
+                                .add { latch.countDown() }
+                        }
+                    }
                 }
             }
         }

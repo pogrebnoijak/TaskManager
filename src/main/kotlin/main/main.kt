@@ -1,8 +1,6 @@
 package main
 
-import kotlinx.coroutines.runBlocking
-
-fun main() = runBlocking {
+fun main() {
     val taskExecutor = TaskExecutor()
     val taskExecutorNaive = TaskExecutorNaive()
 
